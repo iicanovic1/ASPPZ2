@@ -1,0 +1,4 @@
+WSL:  Configure Disable profile
+
+Cannot get compiler information:
+	WSL distribution '' is not found
