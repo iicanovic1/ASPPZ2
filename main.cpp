@@ -56,6 +56,8 @@ public:
 
 };
 
+
+
 template <typename T>
 NizLista<T>::NizLista(int size) {
     kapacitet =size;
@@ -100,7 +102,7 @@ void NizLista<T>::obrisi() {
         return;
     else if (tekuci == duzina - 1){
         delete l[tekuci];
-        tekuci--;
+        if (tekuci != 0)tekuci--;
     }
     else{
         delete l[tekuci];
@@ -108,10 +110,10 @@ void NizLista<T>::obrisi() {
             l[i] = l[i+1];
     }
     duzina--;
-    if(duzina == 0){
+    /*if(duzina == 0){
         delete[] l;
         l = nullptr;
-    }
+    }*/
 }
 
 template <typename T>
@@ -254,17 +256,18 @@ public:
     T trenutni()const override{return tekuci->element; }; // radi
     bool prethodni() override; // radi
     bool sljedeci() override{
+        if (tekuci == krajListe) return false;
         prije_tekuci = prije_tekuci->sljedeci; tekuci = tekuci->sljedeci; return true;
     }; //radi
-    void pocetak() override{ tekuci = pocetakListe->sljedeci;}; //radi
+    void pocetak() override{ tekuci = pocetakListe->sljedeci; prije_tekuci = pocetakListe;}; //radi
     void kraj() override{ tekuci = krajListe;}; //radi
     void obrisi() override; //radi
     void dodajIspred(const T &el) override; // radi
     void dodajIza(const T &el) override; //radi
-    T &operator[](int broj) override{return tekuci->element;};
-    T operator[](int broj) const override{return tekuci->element;};
-    JednostrukaLista<T> &operator = (const JednostrukaLista<T> &lista){ return this;};
-    JednostrukaLista<T> &operator = (JednostrukaLista<T> &&lista){return this;};
+    T &operator[](int broj) override;
+    T operator[](int broj) const override;
+    JednostrukaLista<T> &operator = (const JednostrukaLista<T> &lista);
+    JednostrukaLista<T> &operator = (JednostrukaLista<T> &&lista);
     JednostrukaLista(const JednostrukaLista<T> &lista){
         pocetakListe=new Cvor<T>(*lista.pocetakListe);
         if(pocetakListe == nullptr) return;
@@ -278,11 +281,10 @@ public:
         dduzina=lista.dduzina;
         lduzina = lista.lduzina;
     }; // radi
-    JednostrukaLista(JednostrukaLista<T> &&lista){};
+    JednostrukaLista(JednostrukaLista<T> &&lista);
     template<typename T1>
     friend void ispisiJednostruka ( JednostrukaLista<T1> lista);
 
-    bool testKonstruktoraJednostruka();
 };
 
 template<typename T>
@@ -327,7 +329,8 @@ void JednostrukaLista<T>::dodajIspred(const T &el) {
         prije_tekuci = pocetakListe;
         krajListe = tekuci;
         //std::cout << "Prije tekuci : " << prije_tekuci->element << " a tekuci : " << tekuci->element<< std::endl;
-
+        lduzina--;
+        dduzina++;
     }else{
         //std::cout << "Prije tekuci : " << prije_tekuci->element << " a tekuci : " << tekuci->element<< std::endl;
         prije_tekuci->sljedeci = new Cvor<T>(el,tekuci);
@@ -372,7 +375,13 @@ bool JednostrukaLista<T>::prethodni() {
 template<typename T>
 void JednostrukaLista<T>::obrisi() {
     if(brojElemenata() == 0) return;
-    if(tekuci == krajListe){
+    if(this->brojElemenata() == 1){
+        delete tekuci;
+        krajListe = pocetakListe;
+        tekuci = pocetakListe;
+        prije_tekuci =nullptr;
+        pocetakListe->sljedeci = nullptr;
+    }else if(tekuci == krajListe){
         this->prethodni();
         krajListe = tekuci;
         Cvor<T> *brisanje = tekuci->sljedeci;
@@ -380,14 +389,130 @@ void JednostrukaLista<T>::obrisi() {
         tekuci->sljedeci = nullptr;
     }else {
         prije_tekuci->sljedeci = tekuci->sljedeci;
-        std::cout<< " brisem " << tekuci->element << " a prije mene je " <<prije_tekuci->element;
+        //std::cout<< " brisem " << tekuci->element << " a prije mene je " <<prije_tekuci->element;
         delete tekuci;
         tekuci = prije_tekuci->sljedeci;
     }
 dduzina--;
 }
 
+template<typename T>
+T &JednostrukaLista<T>::operator[](int broj) {
+    Cvor<T> *temp=pocetakListe->sljedeci;
+    for(int j=0; j<broj; j++) temp=temp->sljedeci;
+    return temp->element;
+}
+
+template<typename T>
+T JednostrukaLista<T>::operator[](int broj) const {
+    Cvor<T> *temp=pocetakListe->sljedeci;
+    for(int j=0; j<broj; j++) temp=temp->sljedeci;
+    return temp->element;
+}
+
+template<typename T>
+JednostrukaLista<T> &JednostrukaLista<T>::operator=(const JednostrukaLista<T> &lista) {
+    this->Unisti();
+    pocetakListe=new Cvor<T>(*lista.pocetakListe);
+    if(pocetakListe == nullptr) return *this;
+    Cvor<T> *tempNova=pocetakListe;
+    Cvor<T> *tempStara=lista.pocetakListe;
+    while(tempStara->sljedeci != nullptr) {
+        tempNova->sljedeci = new Cvor <T>(*tempStara->sljedeci);
+        tempNova=tempNova->sljedeci;
+        tempStara=tempStara->sljedeci;
+    }
+    dduzina=lista.dduzina;
+    lduzina = lista.lduzina;
+    return *this;
+}
+
+template<typename T>
+JednostrukaLista<T> &JednostrukaLista<T>::operator=(JednostrukaLista<T> &&lista) {
+    if(&lista==this) return *this;
+    this->Unisti();
+    pocetakListe = lista.pocetakListe;
+    tekuci = lista.tekuci;
+    prije_tekuci = lista.prije_tekuci;
+    krajListe = lista.krajListe;
+    dduzina = lista.dduzina;
+    lduzina = lista.lduzina;
+    pocetakListe = nullptr;
+    krajListe= nullptr;
+    tekuci = nullptr;
+    prije_tekuci = nullptr;
+    return *this;
+}
+
+template<typename T>
+JednostrukaLista<T>::JednostrukaLista(JednostrukaLista<T> &&lista) {
+    pocetakListe = lista.pocetakListe;
+    tekuci = lista.tekuci;
+    prije_tekuci = lista.prije_tekuci;
+    krajListe = lista.krajListe;
+    dduzina = lista.dduzina;
+    lduzina = lista.lduzina;
+    pocetakListe = nullptr;
+    krajListe= nullptr;
+    tekuci = nullptr;
+    prije_tekuci = nullptr;
+}
+
 //testne funkcije
+
+template<typename T>
+bool testTrenutniPrethodniSljedeci (){
+    JednostrukaLista<int> testnaLista ;
+    testnaLista.dodajIza(1);
+    testnaLista.dodajIza(5);
+    testnaLista.sljedeci();
+    testnaLista.trenutni() = 50 ;
+    testnaLista.prethodni();
+    testnaLista.trenutni() = 10 ;
+    testnaLista.dodajIza(4);
+    testnaLista.dodajIza(3);
+    testnaLista.dodajIza(2);
+
+    ispisiJednostruka<int>(testnaLista);
+    return true;
+}
+
+template<typename T>
+bool testPocetakKrajObrisi (){
+    JednostrukaLista<int> testnaLista ;
+    testnaLista.dodajIspred(1);
+    testnaLista.obrisi();
+    ispisiJednostruka<int>(testnaLista);
+    return true;
+}
+
+template<typename T>
+bool testOperatorDodjele (){
+    JednostrukaLista<T> testnaLista ;
+    testnaLista.dodajIspred(1);
+    testnaLista.obrisi();
+    ispisiJednostruka<int>(testnaLista);
+    return true;
+}
+
+
+template<typename T>
+bool testKopirajucikonstruktor (){
+    JednostrukaLista<T> testnaLista ;
+    testnaLista.dodajIspred(1);
+    testnaLista.obrisi();
+    ispisiJednostruka<int>(testnaLista);
+    return true;
+}
+
+template<typename T>
+bool testRVrijednosnaReferenca (){
+    JednostrukaLista<T> testnaLista ;
+    testnaLista.dodajIspred(1);
+    testnaLista.obrisi();
+    ispisiJednostruka<int>(testnaLista);
+    return true;
+}
 template<typename T>
 bool testKonstruktoraJednostruka (){
     JednostrukaLista<int> testnaLista ;
@@ -419,40 +544,27 @@ bool testDodajIzaJednostruka (){
     return true;
 }
 
-template<typename T>
-bool testTrenutniPrethodniSljedeci (){
-    JednostrukaLista<int> testnaLista ;
-    testnaLista.dodajIza(1);
-    testnaLista.dodajIza(5);
-    testnaLista.sljedeci();
-    testnaLista.trenutni() = 50 ;
-    testnaLista.prethodni();
-    testnaLista.trenutni() = 10 ;
-    testnaLista.dodajIza(4);
-    testnaLista.dodajIza(3);
-    testnaLista.dodajIza(2);
-
-    ispisiJednostruka<int>(testnaLista);
-    return true;
-}
-
-template<typename T>
-bool testPocetakKrajObrisi (){
-    JednostrukaLista<int> testnaLista ;
-    testnaLista.dodajIspred(1);
-    testnaLista.obrisi();
-    ispisiJednostruka<int>(testnaLista);
-    return true;
-}
 
 
 
 
 
 int main() {
-    //testKonstruktoraJednostruka<int>();
-    //testDodajIzaJednostruka<int>();
-    //testDodajIspredJednostruka<int>();
-    //testTrenutniPrethodniSljedeci<int>();
-    //testPocetakKrajObrisi<int>();
+    testKonstruktoraJednostruka<int>();
+    testDodajIzaJednostruka<int>();
+    testDodajIspredJednostruka<int>();
+    testTrenutniPrethodniSljedeci<int>();
+    testPocetakKrajObrisi<int>();
+    testRVrijednosnaReferenca<int>();
+    testKopirajucikonstruktor<int>();
+    testOperatorDodjele<int>();
+    testDodajIspredJednostruka<int>();
+    testTrenutniPrethodniSljedeci<int>();
+    testPocetakKrajObrisi<int>();
+    testTrenutniPrethodniSljedeci<int>();
+    testPocetakKrajObrisi<int>();
+    testRVrijednosnaReferenca<int>();
+    testKopirajucikonstruktor<int>();
+
+
 }
